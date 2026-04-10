@@ -1,0 +1,28 @@
+paths:
+  raw_dir: data/raw
+  subsampled_dir: data/subsampled
+  qc_dir: data/qc
+  qc_reports_dir: data/qc/reports
+  kraken_dir: data/kraken
+  features_dir: data/features
+  reports_dir: reports
+  cleaned_metadata: metadata/cleaned_metadata.csv
+
+tools:
+  prefetch_path: prefetch
+  fasterq_dump_path: fasterq-dump
+  fastp_path: fastp
+  kraken2_path: kraken2
+  seqtk_path: seqtk
+
+kraken_db: /path/to/kraken2_db
+subsample_fraction: 0.1
+target_reads: null
+kraken_confidence: 0.1
+pseudocount: 1e-6
+presence_absence_threshold: 1e-4
+panel_taxa:
+  - Fusobacterium nucleatum
+  - Bacteroides fragilis
+  - Escherichia coli
+  - Peptostreptococcus anaerobius
