@@ -1,0 +1,3 @@
+run_accession,sample_id,label,age_group,library_name
+SRR000001,S1,healthy,young,libA
+SRR000002,S2,cancer,old,libB
