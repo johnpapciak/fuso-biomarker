@@ -1,0 +1,10 @@
+name: fuso-biomarker
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas>=2.0
+  - pyyaml>=6.0
+  - matplotlib>=3.7
+  - pytest>=7.0
+  - pip

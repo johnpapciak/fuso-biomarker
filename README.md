@@ -19,6 +19,13 @@ Expected on PATH (or set in `config/config.yaml`):
 If tools are missing, scripts raise clear errors.
 
 ## Install
+Using Conda:
+```bash
+conda env create -f environment.yml
+conda activate fuso-biomarker
+```
+
+Using `venv` + pip:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
