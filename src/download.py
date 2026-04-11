@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import shutil
+from gzip import open as gzopen
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +16,16 @@ from .utils import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _gzip_fastq(path: Path) -> Path:
+    if path.suffix == ".gz":
+        return path
+    gz_path = path.with_suffix(f"{path.suffix}.gz")
+    with path.open("rb") as src, gzopen(gz_path, "wb") as dst:
+        shutil.copyfileobj(src, dst)
+    path.unlink()
+    return gz_path
 
 
 def download_runs(
@@ -60,7 +72,10 @@ def download_runs(
                 cmd = [fasterq, run, "-O", str(raw_dir), "--split-files"]
 
             run_command(cmd, LOGGER)
-            detect_fastqs(run, raw_dir)
+            fq1, fq2 = detect_fastqs(run, raw_dir)
+            _gzip_fastq(fq1)
+            if fq2 is not None:
+                _gzip_fastq(fq2)
             records.append({"run_accession": run, "status": "downloaded"})
         except Exception as exc:  # noqa: BLE001
             LOGGER.exception("Failed downloading %s: %s", run, exc)

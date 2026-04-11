@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 import random
 import shutil
+import subprocess
 from pathlib import Path
 
 import pandas as pd
 
-from .utils import count_fastq_reads, detect_fastqs, ensure_dir, run_command, validate_and_clean_metadata
+from .utils import count_fastq_reads, detect_fastqs, ensure_dir, validate_and_clean_metadata
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,13 +19,25 @@ def _python_subsample_single_end(inp: Path, out: Path, fraction: float, seed: in
 
     random.seed(seed)
     opener = gzip.open if inp.suffix == ".gz" else open
-    with opener(inp, "rt", encoding="utf-8", errors="ignore") as fin, out.open("w", encoding="utf-8") as fout:
+    out_opener = gzip.open if out.suffix == ".gz" else open
+    with opener(inp, "rt", encoding="utf-8", errors="ignore") as fin, out_opener(out, "wt", encoding="utf-8") as fout:
         while True:
             rec = [fin.readline() for _ in range(4)]
             if not rec[0]:
                 break
             if random.random() < fraction:
                 fout.write("".join(rec))
+
+
+def _seqtk_subsample(seqtk: str, inp: Path, out: Path, fraction: float) -> None:
+    cmd = f"{seqtk} sample -s42 {inp} {fraction}"
+    if out.suffix == ".gz":
+        cmd = f"{cmd} | gzip -c > {out}"
+    else:
+        cmd = f"{cmd} > {out}"
+    proc = subprocess.run(["bash", "-lc", cmd], capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or f"seqtk failed for {inp}")
 
 
 def subsample_runs(
@@ -62,9 +75,9 @@ def subsample_runs(
                 raise RuntimeError("Paired-end subsampling requires seqtk in this lightweight pipeline.")
 
             if has_seqtk:
-                run_command(["bash", "-lc", f"{seqtk} sample -s42 {in1} {use_fraction} > {out1}"], LOGGER)
+                _seqtk_subsample(seqtk, in1, out1, use_fraction)
                 if in2 and out2:
-                    run_command(["bash", "-lc", f"{seqtk} sample -s42 {in2} {use_fraction} > {out2}"], LOGGER)
+                    _seqtk_subsample(seqtk, in2, out2, use_fraction)
             else:
                 _python_subsample_single_end(in1, out1, use_fraction)
 
