@@ -29,15 +29,47 @@ def _python_subsample_single_end(inp: Path, out: Path, fraction: float, seed: in
                 fout.write("".join(rec))
 
 
+def _python_subsample_paired_end(inp1: Path, inp2: Path, out1: Path, out2: Path, fraction: float, seed: int = 42) -> None:
+    """Fallback paired-end subsampling preserving read pairing."""
+    import gzip
+
+    random.seed(seed)
+    in1_opener = gzip.open if inp1.suffix == ".gz" else open
+    in2_opener = gzip.open if inp2.suffix == ".gz" else open
+    out1_opener = gzip.open if out1.suffix == ".gz" else open
+    out2_opener = gzip.open if out2.suffix == ".gz" else open
+
+    with (
+        in1_opener(inp1, "rt", encoding="utf-8", errors="ignore") as fin1,
+        in2_opener(inp2, "rt", encoding="utf-8", errors="ignore") as fin2,
+        out1_opener(out1, "wt", encoding="utf-8") as fout1,
+        out2_opener(out2, "wt", encoding="utf-8") as fout2,
+    ):
+        while True:
+            rec1 = [fin1.readline() for _ in range(4)]
+            rec2 = [fin2.readline() for _ in range(4)]
+            if not rec1[0] or not rec2[0]:
+                break
+            if random.random() < fraction:
+                fout1.write("".join(rec1))
+                fout2.write("".join(rec2))
+
+
 def _seqtk_subsample(seqtk: str, inp: Path, out: Path, fraction: float) -> None:
-    cmd = f"{seqtk} sample -s42 {inp} {fraction}"
-    if out.suffix == ".gz":
-        cmd = f"{cmd} | gzip -c > {out}"
-    else:
-        cmd = f"{cmd} > {out}"
-    proc = subprocess.run(["bash", "-lc", cmd], capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or f"seqtk failed for {inp}")
+    import gzip
+
+    cmd = [seqtk, "sample", "-s42", str(inp), str(fraction)]
+    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False) as proc:
+        out_opener = gzip.open if out.suffix == ".gz" else open
+        with out_opener(out, "wb") as fout:
+            assert proc.stdout is not None
+            shutil.copyfileobj(proc.stdout, fout)
+
+        stderr = proc.stderr.read() if proc.stderr is not None else b""
+        returncode = proc.wait()
+        if returncode != 0:
+            stderr_text = stderr.decode("utf-8", errors="ignore").strip()
+            raise RuntimeError(stderr_text or f"seqtk failed for {inp}")
 
 
 def subsample_runs(
@@ -82,6 +114,17 @@ def subsample_runs(
                 _python_subsample_single_end(in1, out1, use_fraction)
 
             sub_n = count_fastq_reads(out1)
+            if sub_n == 0 and total > 0 and use_fraction > 0:
+                LOGGER.warning(
+                    "Subsampling for %s produced zero reads with seqtk; retrying with Python fallback.",
+                    run,
+                )
+                if in2 and out2:
+                    _python_subsample_paired_end(in1, in2, out1, out2, use_fraction)
+                else:
+                    _python_subsample_single_end(in1, out1, use_fraction)
+                sub_n = count_fastq_reads(out1)
+
             records.append(
                 {
                     "run_accession": run,
