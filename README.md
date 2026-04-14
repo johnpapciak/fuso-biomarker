@@ -62,7 +62,7 @@ python -m src.cli run-all --metadata metadata/example_metadata.csv --fraction 0.
 ## Main outputs
 - `data/raw/` downloaded FASTQ
 - `data/subsampled/` reduced FASTQ + log
-- `data/qc/` cleaned FASTQ + `qc_summary.csv`
+- `data/qc/` cleaned gzipped FASTQ (`*.fastq.gz`) + `qc_summary.csv`
 - `data/kraken/` Kraken outputs and reports
 - `data/features/full_abundance_matrix.csv`
 - `data/features/targeted_feature_matrix.csv`

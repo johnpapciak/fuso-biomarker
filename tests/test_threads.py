@@ -55,3 +55,4 @@ def test_run_qc_passes_thread_flag(tmp_path: Path, monkeypatch) -> None:
 
     assert "--thread" in recorded_cmd["cmd"]
     assert recorded_cmd["cmd"][recorded_cmd["cmd"].index("--thread") + 1] == "3"
+    assert recorded_cmd["cmd"][recorded_cmd["cmd"].index("--out1") + 1].endswith(".fastq.gz")
