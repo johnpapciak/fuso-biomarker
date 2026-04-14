@@ -100,22 +100,20 @@ def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
     out_df.to_csv(features_dir / "targeted_feature_matrix.csv", index=False)
 
     if not out_df.empty:
-        plt.figure()
-        plt.hist(out_df["F_nucleatum_species_abundance"], bins=20)
-        plt.xlabel("F. nucleatum relative abundance")
-        plt.ylabel("Samples")
-        plt.tight_layout()
-        plt.savefig(reports_dir / "f_nucleatum_hist.png", dpi=150)
-        plt.close()
+        fig, ax = plt.subplots(constrained_layout=True)
+        ax.hist(out_df["F_nucleatum_species_abundance"], bins=20)
+        ax.set_xlabel("F. nucleatum relative abundance")
+        ax.set_ylabel("Samples")
+        fig.savefig(reports_dir / "f_nucleatum_hist.png", dpi=150)
+        plt.close(fig)
 
         detect_cols = [c for c in out_df.columns if c.endswith("_present")]
         if detect_cols:
-            plt.figure(figsize=(8, 3))
-            out_df[detect_cols].sum().sort_values(ascending=False).plot(kind="bar")
-            plt.ylabel("Detected samples")
-            plt.tight_layout()
-            plt.savefig(reports_dir / "panel_detection_counts.png", dpi=150)
-            plt.close()
+            fig, ax = plt.subplots(figsize=(8, 3), constrained_layout=True)
+            out_df[detect_cols].sum().sort_values(ascending=False).plot(kind="bar", ax=ax)
+            ax.set_ylabel("Detected samples")
+            fig.savefig(reports_dir / "panel_detection_counts.png", dpi=150)
+            plt.close(fig)
 
     return out_df
 
