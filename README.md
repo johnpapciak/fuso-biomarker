@@ -16,6 +16,8 @@ Expected on PATH (or set in `config/config.yaml`):
 - `fastp`
 - `kraken2`
 
+You can control tool multithreading with `threads` in `config/config.yaml` (default `1`) or with `--threads` for `download`, `qc`, `kraken`, and `run-all`.
+
 If tools are missing, scripts raise clear errors.
 
 ## Install
@@ -45,16 +47,16 @@ See `metadata/example_metadata.csv`.
 ## Run steps
 ```bash
 python -m src.cli validate-metadata --metadata metadata/example_metadata.csv
-python -m src.cli download --metadata metadata/example_metadata.csv
+python -m src.cli download --metadata metadata/example_metadata.csv --threads 8
 python -m src.cli subsample --metadata metadata/example_metadata.csv --fraction 0.1
-python -m src.cli qc --metadata metadata/example_metadata.csv
-python -m src.cli kraken --metadata metadata/example_metadata.csv
+python -m src.cli qc --metadata metadata/example_metadata.csv --threads 8
+python -m src.cli kraken --metadata metadata/example_metadata.csv --threads 8
 python -m src.cli features --metadata metadata/example_metadata.csv
 ```
 
 Run full pipeline:
 ```bash
-python -m src.cli run-all --metadata metadata/example_metadata.csv --fraction 0.1
+python -m src.cli run-all --metadata metadata/example_metadata.csv --fraction 0.1 --threads 8
 ```
 
 ## Main outputs

@@ -33,6 +33,7 @@ def download_runs(
     config: dict,
     limit: int | None = None,
     skip_existing: bool = True,
+    threads: int | None = None,
 ) -> pd.DataFrame:
     tools = config["tools"]
     raw_dir = Path(config["paths"]["raw_dir"])
@@ -48,6 +49,10 @@ def download_runs(
     check_tool_available(fasterq)
     if prefetch:
         check_tool_available(prefetch)
+
+    resolved_threads = int(threads if threads is not None else config.get("threads", 1))
+    if resolved_threads < 1:
+        raise ValueError("threads must be >= 1")
 
     records: list[dict[str, str]] = []
     for run in md["run_accession"]:
@@ -65,11 +70,11 @@ def download_runs(
                 run_command([prefetch, run, "-O", str(raw_dir)], LOGGER)
                 sra_path = raw_dir / run / f"{run}.sra"
                 if sra_path.exists():
-                    cmd = [fasterq, str(sra_path), "-O", str(raw_dir), "--split-files"]
+                    cmd = [fasterq, str(sra_path), "-O", str(raw_dir), "--split-files", "-e", str(resolved_threads)]
                 else:
-                    cmd = [fasterq, run, "-O", str(raw_dir), "--split-files"]
+                    cmd = [fasterq, run, "-O", str(raw_dir), "--split-files", "-e", str(resolved_threads)]
             else:
-                cmd = [fasterq, run, "-O", str(raw_dir), "--split-files"]
+                cmd = [fasterq, run, "-O", str(raw_dir), "--split-files", "-e", str(resolved_threads)]
 
             run_command(cmd, LOGGER)
             fq1, fq2 = detect_fastqs(run, raw_dir)

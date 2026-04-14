@@ -29,7 +29,7 @@ def parse_kraken_report(report_path: Path, sample_id: str) -> pd.DataFrame:
     return df[["sample_id", *COLS]]
 
 
-def run_kraken(metadata_csv: Path, config: dict, skip_existing: bool = True) -> pd.DataFrame:
+def run_kraken(metadata_csv: Path, config: dict, skip_existing: bool = True, threads: int | None = None) -> pd.DataFrame:
     kraken2 = config["tools"].get("kraken2_path", "kraken2")
     check_tool_available(kraken2)
 
@@ -40,6 +40,10 @@ def run_kraken(metadata_csv: Path, config: dict, skip_existing: bool = True) -> 
     qc_dir = Path(config["paths"]["qc_dir"])
     out_dir = Path(config["paths"]["kraken_dir"])
     ensure_dir(out_dir)
+
+    resolved_threads = int(threads if threads is not None else config.get("threads", 1))
+    if resolved_threads < 1:
+        raise ValueError("threads must be >= 1")
 
     conf = config.get("kraken_confidence")
     md = validate_and_clean_metadata(metadata_csv)
@@ -56,7 +60,17 @@ def run_kraken(metadata_csv: Path, config: dict, skip_existing: bool = True) -> 
                 logs.append({"run_accession": run, "status": "skipped_existing"})
                 continue
 
-            cmd = [kraken2, "--db", str(db), "--report", str(report), "--output", str(output)]
+            cmd = [
+                kraken2,
+                "--db",
+                str(db),
+                "--report",
+                str(report),
+                "--output",
+                str(output),
+                "--threads",
+                str(resolved_threads),
+            ]
             if conf is not None:
                 cmd.extend(["--confidence", str(conf)])
             if in2 is not None:
