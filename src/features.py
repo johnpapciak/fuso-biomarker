@@ -100,18 +100,23 @@ def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
     out_df.to_csv(features_dir / "targeted_feature_matrix.csv", index=False)
 
     if not out_df.empty:
-        fig, ax = plt.subplots(constrained_layout=True)
+        fig, ax = plt.subplots(figsize=(6, 4))
         ax.hist(out_df["F_nucleatum_species_abundance"], bins=20)
         ax.set_xlabel("F. nucleatum relative abundance")
         ax.set_ylabel("Samples")
+        fig.tight_layout()
         fig.savefig(reports_dir / "f_nucleatum_hist.png", dpi=150)
         plt.close(fig)
 
         detect_cols = [c for c in out_df.columns if c.endswith("_present")]
         if detect_cols:
-            fig, ax = plt.subplots(figsize=(8, 3), constrained_layout=True)
+            fig_height = max(3.5, 0.35 * len(detect_cols))
+            fig, ax = plt.subplots(figsize=(8, fig_height))
             out_df[detect_cols].sum().sort_values(ascending=False).plot(kind="bar", ax=ax)
             ax.set_ylabel("Detected samples")
+            ax.set_xlabel("Panel taxa")
+            plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+            fig.tight_layout()
             fig.savefig(reports_dir / "panel_detection_counts.png", dpi=150)
             plt.close(fig)
 
