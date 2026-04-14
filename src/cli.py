@@ -22,6 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
     for cmd in ["validate-metadata", "download", "qc", "kraken", "features"]:
         s = sub.add_parser(cmd)
         s.add_argument("--metadata", required=True, type=Path)
+        if cmd in {"download", "qc", "kraken"}:
+            s.add_argument("--threads", type=int, default=None)
 
     s_sub = sub.add_parser("subsample")
     s_sub.add_argument("--metadata", required=True, type=Path)
@@ -33,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     s_all.add_argument("--fraction", type=float, default=None)
     s_all.add_argument("--target-reads", type=int, default=None)
     s_all.add_argument("--limit", type=int, default=None)
+    s_all.add_argument("--threads", type=int, default=None)
     return parser
 
 
@@ -49,21 +52,21 @@ def main() -> None:
         return
 
     if args.command == "download":
-        download_runs(args.metadata, config)
+        download_runs(args.metadata, config, threads=args.threads)
     elif args.command == "subsample":
         subsample_runs(args.metadata, config, fraction=args.fraction, target_reads=args.target_reads)
     elif args.command == "qc":
-        run_qc(args.metadata, config)
+        run_qc(args.metadata, config, threads=args.threads)
     elif args.command == "kraken":
-        run_kraken(args.metadata, config)
+        run_kraken(args.metadata, config, threads=args.threads)
     elif args.command == "features":
         build_features(args.metadata, config)
         build_stage_summary(config, args.metadata)
     elif args.command == "run-all":
-        download_runs(args.metadata, config, limit=args.limit)
+        download_runs(args.metadata, config, limit=args.limit, threads=args.threads)
         subsample_runs(args.metadata, config, fraction=args.fraction, target_reads=args.target_reads)
-        run_qc(args.metadata, config)
-        run_kraken(args.metadata, config)
+        run_qc(args.metadata, config, threads=args.threads)
+        run_kraken(args.metadata, config, threads=args.threads)
         build_features(args.metadata, config)
         build_stage_summary(config, args.metadata)
 

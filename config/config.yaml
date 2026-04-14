@@ -18,6 +18,7 @@ tools:
 kraken_db: /path/to/kraken2_db
 subsample_fraction: 0.1
 target_reads: null
+threads: 1
 kraken_confidence: 0.1
 pseudocount: 1e-6
 presence_absence_threshold: 1e-4

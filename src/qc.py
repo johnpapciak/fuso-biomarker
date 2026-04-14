@@ -10,7 +10,7 @@ from .utils import check_tool_available, detect_fastqs, ensure_dir, read_json, r
 LOGGER = logging.getLogger(__name__)
 
 
-def run_qc(metadata_csv: Path, config: dict, skip_existing: bool = True) -> pd.DataFrame:
+def run_qc(metadata_csv: Path, config: dict, skip_existing: bool = True, threads: int | None = None) -> pd.DataFrame:
     fastp = config["tools"].get("fastp_path", "fastp")
     check_tool_available(fastp)
 
@@ -19,6 +19,10 @@ def run_qc(metadata_csv: Path, config: dict, skip_existing: bool = True) -> pd.D
     rep_dir = Path(config["paths"]["qc_reports_dir"])
     ensure_dir(qc_dir)
     ensure_dir(rep_dir)
+
+    resolved_threads = int(threads if threads is not None else config.get("threads", 1))
+    if resolved_threads < 1:
+        raise ValueError("threads must be >= 1")
 
     md = validate_and_clean_metadata(metadata_csv)
     records: list[dict] = []
@@ -38,7 +42,19 @@ def run_qc(metadata_csv: Path, config: dict, skip_existing: bool = True) -> pd.D
                 records.append({"run_accession": run, "status": "skipped_existing"})
                 continue
 
-            cmd = [fastp, "--in1", str(in1), "--out1", str(out1), "--json", str(json_out), "--html", str(html_out)]
+            cmd = [
+                fastp,
+                "--in1",
+                str(in1),
+                "--out1",
+                str(out1),
+                "--json",
+                str(json_out),
+                "--html",
+                str(html_out),
+                "--thread",
+                str(resolved_threads),
+            ]
             if in2 is not None:
                 cmd.extend(["--in2", str(in2), "--out2", str(out2)])
             run_command(cmd, LOGGER)
