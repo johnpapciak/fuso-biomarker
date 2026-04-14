@@ -30,10 +30,10 @@ def run_qc(metadata_csv: Path, config: dict, skip_existing: bool = True, threads
     for run in md["run_accession"]:
         try:
             in1, in2 = detect_fastqs(run, in_dir)
-            out1 = qc_dir / f"{run}_qc_1.fastq"
-            out2 = qc_dir / f"{run}_qc_2.fastq"
+            out1 = qc_dir / f"{run}_qc_1.fastq.gz"
+            out2 = qc_dir / f"{run}_qc_2.fastq.gz"
             if in2 is None:
-                out1 = qc_dir / f"{run}_qc.fastq"
+                out1 = qc_dir / f"{run}_qc.fastq.gz"
 
             json_out = rep_dir / f"{run}.fastp.json"
             html_out = rep_dir / f"{run}.fastp.html"
