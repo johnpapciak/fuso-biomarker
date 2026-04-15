@@ -20,6 +20,7 @@ subsample_fraction: 0.1
 target_reads: null
 threads: 1
 kraken_confidence: 0.1
+kraken_memory_mapping: false
 pseudocount: 1e-6
 presence_absence_threshold: 1e-4
 panel_taxa:
