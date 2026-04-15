@@ -46,6 +46,9 @@ def run_kraken(metadata_csv: Path, config: dict, skip_existing: bool = True, thr
         raise ValueError("threads must be >= 1")
 
     conf = config.get("kraken_confidence")
+    memory_mapping = config.get("kraken_memory_mapping", False)
+    if isinstance(memory_mapping, str):
+        memory_mapping = memory_mapping.strip().lower() in {"1", "true", "yes", "on"}
     md = validate_and_clean_metadata(metadata_csv)
     logs: list[dict[str, str]] = []
 
@@ -73,6 +76,8 @@ def run_kraken(metadata_csv: Path, config: dict, skip_existing: bool = True, thr
             ]
             if conf is not None:
                 cmd.extend(["--confidence", str(conf)])
+            if memory_mapping:
+                cmd.append("--memory-mapping")
             if in2 is not None:
                 cmd.extend(["--paired", str(in1), str(in2)])
             else:

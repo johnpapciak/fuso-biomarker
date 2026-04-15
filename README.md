@@ -18,6 +18,8 @@ Expected on PATH (or set in `config/config.yaml`):
 
 You can control tool multithreading with `threads` in `config/config.yaml` (default `1`) or with `--threads` for `download`, `qc`, `kraken`, and `run-all`.
 
+Set `kraken_memory_mapping: true` in `config/config.yaml` to add Kraken2's `--memory-mapping` flag (useful when RAM is limited).
+
 If tools are missing, scripts raise clear errors.
 
 ## Install
