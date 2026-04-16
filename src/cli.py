@@ -4,6 +4,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from .bracken import run_bracken
 from .download import download_runs
 from .features import build_features, build_stage_summary
 from .kraken import run_kraken
@@ -19,10 +20,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default="config/config.yaml", type=Path)
 
     sub = parser.add_subparsers(dest="command", required=True)
-    for cmd in ["validate-metadata", "download", "qc", "kraken", "features"]:
+    for cmd in ["validate-metadata", "download", "qc", "kraken", "bracken", "features"]:
         s = sub.add_parser(cmd)
         s.add_argument("--metadata", required=True, type=Path)
-        if cmd in {"download", "qc", "kraken"}:
+        if cmd in {"download", "qc", "kraken", "bracken"}:
             s.add_argument("--threads", type=int, default=None)
 
     s_sub = sub.add_parser("subsample")
@@ -59,6 +60,8 @@ def main() -> None:
         run_qc(args.metadata, config, threads=args.threads)
     elif args.command == "kraken":
         run_kraken(args.metadata, config, threads=args.threads)
+    elif args.command == "bracken":
+        run_bracken(args.metadata, config, threads=args.threads)
     elif args.command == "features":
         build_features(args.metadata, config)
         build_stage_summary(config, args.metadata)
@@ -67,6 +70,7 @@ def main() -> None:
         subsample_runs(args.metadata, config, fraction=args.fraction, target_reads=args.target_reads)
         run_qc(args.metadata, config, threads=args.threads)
         run_kraken(args.metadata, config, threads=args.threads)
+        run_bracken(args.metadata, config, threads=args.threads)
         build_features(args.metadata, config)
         build_stage_summary(config, args.metadata)
 
