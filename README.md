@@ -15,6 +15,7 @@ Expected on PATH (or set in `config/config.yaml`):
 - `seqtk` (recommended for paired subsampling)
 - `fastp`
 - `kraken2`
+- `bracken`
 
 You can control tool multithreading with `threads` in `config/config.yaml` (default `1`) or with `--threads` for `download`, `qc`, `kraken`, and `run-all`.
 
@@ -53,6 +54,7 @@ python -m src.cli download --metadata metadata/example_metadata.csv --threads 8
 python -m src.cli subsample --metadata metadata/example_metadata.csv --fraction 0.1
 python -m src.cli qc --metadata metadata/example_metadata.csv --threads 8
 python -m src.cli kraken --metadata metadata/example_metadata.csv --threads 8
+python -m src.cli bracken --metadata metadata/example_metadata.csv --threads 8
 python -m src.cli features --metadata metadata/example_metadata.csv
 ```
 
@@ -66,6 +68,7 @@ python -m src.cli run-all --metadata metadata/example_metadata.csv --fraction 0.
 - `data/subsampled/` reduced FASTQ + log
 - `data/qc/` cleaned gzipped FASTQ (`*.fastq.gz`) + `qc_summary.csv`
 - `data/kraken/` Kraken outputs and reports
+- `data/bracken/` Bracken outputs and abundance summary
 - `data/features/full_abundance_matrix.csv`
 - `data/features/targeted_feature_matrix.csv`
 - `reports/stage_read_summary.csv`
