@@ -22,13 +22,11 @@ def test_run_bracken_generates_outputs(tmp_path: Path, monkeypatch) -> None:
 
     def fake_run_command(cmd: list[str], logger, cwd=None) -> None:
         out_idx = cmd.index("-o") + 1
-        rep_idx = cmd.index("-w") + 1
         Path(cmd[out_idx]).write_text(
             "name\ttaxonomy_id\ttaxonomy_lvl\tkraken_assigned_reads\tadded_reads\tnew_est_reads\tfraction_total_reads\n"
             "Fusobacterium nucleatum\t851\tS\t5\t2\t7\t0.07\n",
             encoding="utf-8",
         )
-        Path(cmd[rep_idx]).write_text("", encoding="utf-8")
 
     monkeypatch.setattr("src.bracken.check_tool_available", lambda _tool: None)
     monkeypatch.setattr("src.bracken.run_command", fake_run_command)
