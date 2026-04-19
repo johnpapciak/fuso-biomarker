@@ -37,21 +37,16 @@ def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, th
         sample_id = row["sample_id"]
         input_report = kraken_dir / f"{run}.report.tsv"
         output_file = bracken_dir / f"{run}.bracken.tsv"
-        output_report = bracken_dir / f"{run}.bracken.report.tsv"
 
         try:
             if not input_report.exists() or input_report.stat().st_size == 0:
                 raise FileNotFoundError(f"Missing Kraken report: {input_report}")
 
-            if skip_existing and output_file.exists() and output_report.exists():
-                output_ready = output_file.stat().st_size > 0
-                report_ready = output_report.stat().st_size > 0
-                if output_ready and report_ready:
+            if skip_existing and output_file.exists():
+                if output_file.stat().st_size > 0:
                     logs.append({"run_accession": run, "sample_id": sample_id, "status": "skipped_existing"})
                     continue
-                LOGGER.warning(
-                    "Found existing but empty Bracken outputs for %s; re-running sample", run
-                )
+                LOGGER.warning("Found existing but empty Bracken output for %s; re-running sample", run)
 
             cmd = [
                 bracken,
@@ -61,8 +56,6 @@ def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, th
                 str(input_report),
                 "-o",
                 str(output_file),
-                "-w",
-                str(output_report),
                 "-r",
                 str(read_len),
                 "-l",
