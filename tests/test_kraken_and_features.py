@@ -147,3 +147,55 @@ def test_run_kraken_memory_mapping_disabled_by_default(tmp_path: Path, monkeypat
 
     run_kraken(md_path, config, skip_existing=False)
     assert "--memory-mapping" not in captured["cmd"]
+
+
+def test_build_features_excludes_homo_taxa_from_panel_and_full_matrix(tmp_path: Path) -> None:
+    (tmp_path / "data/kraken").mkdir(parents=True)
+    (tmp_path / "data/bracken").mkdir(parents=True)
+    (tmp_path / "data/qc/reports").mkdir(parents=True)
+    (tmp_path / "data/features").mkdir(parents=True)
+    (tmp_path / "reports").mkdir(parents=True)
+
+    md = pd.DataFrame(
+        [{"run_accession": "SRR1", "sample_id": "S1", "label": "cancer", "age_group": "old"}]
+    )
+    md_path = tmp_path / "meta.csv"
+    md.to_csv(md_path, index=False)
+
+    (tmp_path / "data/kraken/SRR1.report.tsv").write_text(
+        "100.0\t100\t100\tD\t2\tBacteria\n",
+        encoding="utf-8",
+    )
+    pd.DataFrame(
+        [
+            {"run_accession": "SRR1", "sample_id": "S1", "name": "Fusobacterium nucleatum", "fraction_total_reads": 0.05},
+            {"run_accession": "SRR1", "sample_id": "S1", "name": "Homo sapiens", "fraction_total_reads": 0.20},
+        ]
+    ).to_csv(tmp_path / "data/bracken/bracken_abundance_species.csv", index=False)
+    pd.DataFrame(
+        [
+            {"run_accession": "SRR1", "sample_id": "S1", "name": "Fusobacterium", "fraction_total_reads": 0.10},
+            {"run_accession": "SRR1", "sample_id": "S1", "name": "Homo", "fraction_total_reads": 0.30},
+        ]
+    ).to_csv(tmp_path / "data/bracken/bracken_abundance_genus.csv", index=False)
+
+    config = {
+        "paths": {
+            "kraken_dir": str(tmp_path / "data/kraken"),
+            "bracken_dir": str(tmp_path / "data/bracken"),
+            "qc_dir": str(tmp_path / "data/qc"),
+            "features_dir": str(tmp_path / "data/features"),
+            "reports_dir": str(tmp_path / "reports"),
+        },
+        "panel_taxa": ["Fusobacterium nucleatum", "Homo sapiens", "Homo"],
+        "pseudocount": 1e-6,
+        "presence_absence_threshold": 1e-4,
+    }
+    out = build_features(md_path, config)
+
+    assert "panel_Homo_sapiens" not in out.columns
+    assert "panel_Homo" not in out.columns
+
+    full_matrix = pd.read_csv(tmp_path / "data/features/full_abundance_matrix.csv")
+    assert "Homo sapiens" not in full_matrix.columns
+    assert "Homo" not in full_matrix.columns

@@ -11,6 +11,15 @@ from .kraken import parse_kraken_report
 from .utils import ensure_dir, read_json, validate_and_clean_metadata
 
 LOGGER = logging.getLogger(__name__)
+EXCLUDED_HUMAN_TAXA = {"homo", "homo sapiens"}
+
+
+def _normalize_taxon_name(taxon: str) -> str:
+    return " ".join(str(taxon).strip().lower().replace("_", " ").split())
+
+
+def _is_excluded_human_taxon(taxon: str) -> bool:
+    return _normalize_taxon_name(taxon) in EXCLUDED_HUMAN_TAXA
 
 
 def _load_bracken_abundance_tables(bracken_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -94,6 +103,11 @@ def build_features(
     if species_df.empty and genus_df.empty:
         LOGGER.warning("No combined Bracken abundance tables found in %s; full abundance matrix will be empty", bracken_dir)
 
+    if not species_df.empty:
+        species_df = species_df[~species_df["taxon"].map(_is_excluded_human_taxon)].copy()
+    if not genus_df.empty:
+        genus_df = genus_df[~genus_df["taxon"].map(_is_excluded_human_taxon)].copy()
+
     full_long = pd.concat([species_df, genus_df], ignore_index=True) if not species_df.empty or not genus_df.empty else pd.DataFrame()
     if not full_long.empty:
         full_matrix = full_long.pivot_table(
@@ -113,7 +127,9 @@ def build_features(
     level_opt = auto_panel_levels if auto_panel_levels is not None else auto_panel_cfg.get("levels", "both")
     metric_opt = auto_panel_metric if auto_panel_metric is not None else auto_panel_cfg.get("metric", "mean_x_prevalence")
 
-    panel_taxa = list(config.get("panel_taxa", ["Fusobacterium nucleatum"]))
+    panel_taxa = [
+        taxon for taxon in config.get("panel_taxa", ["Fusobacterium nucleatum"]) if not _is_excluded_human_taxon(taxon)
+    ]
     pseudocount = float(config.get("pseudocount", 1e-6))
     pa_thresh = float(config.get("presence_absence_threshold", 1e-4))
     dynamic_taxa: list[str] = []
@@ -147,7 +163,7 @@ def build_features(
                     }
                 )
 
-    merged_panel_taxa = list(dict.fromkeys(panel_taxa + dynamic_taxa))
+    merged_panel_taxa = [taxon for taxon in dict.fromkeys(panel_taxa + dynamic_taxa) if not _is_excluded_human_taxon(taxon)]
     pd.DataFrame(dynamic_recs).to_csv(features_dir / "auto_panel_taxa.csv", index=False)
 
     rows: list[dict] = []

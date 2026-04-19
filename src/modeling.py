@@ -18,6 +18,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 LOGGER = logging.getLogger(__name__)
+EXCLUDED_HUMAN_PANEL_SUFFIXES = {"homo", "homo_sapiens"}
 
 BASELINE_NUMERIC = [
     "Shannon_diversity",
@@ -72,6 +73,17 @@ def _rank_top_taxa(train_df: pd.DataFrame, taxa_cols: list[str], top_n: int) -> 
         .reset_index(drop=True)
     )
     return ordered.head(min(top_n, len(ordered)))["taxon"].tolist()
+
+
+def _panel_taxa_columns(df: pd.DataFrame) -> list[str]:
+    return [
+        c
+        for c in df.columns
+        if c.startswith("panel_")
+        and not c.endswith("_log10")
+        and not c.endswith("_present")
+        and c.removeprefix("panel_").lower() not in EXCLUDED_HUMAN_PANEL_SUFFIXES
+    ]
 
 
 def _build_preprocessor(feature_columns: list[str], selected_taxa: list[str]) -> ColumnTransformer:
@@ -160,11 +172,7 @@ def run_nested_cv_modeling(
 
     y = df["label"].map(label_map).to_numpy()
     metadata_cols = {"sample_id", "run_accession", "label", "library_name"}
-    taxa_cols = [
-        c
-        for c in df.columns
-        if c.startswith("panel_") and not c.endswith("_log10") and not c.endswith("_present")
-    ]
+    taxa_cols = _panel_taxa_columns(df)
     if not taxa_cols:
         raise ValueError("No taxa panel columns found (expected columns beginning with 'panel_').")
 
