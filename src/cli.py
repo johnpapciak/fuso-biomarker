@@ -25,6 +25,18 @@ def build_parser() -> argparse.ArgumentParser:
         s.add_argument("--metadata", required=True, type=Path)
         if cmd in {"download", "qc", "kraken", "bracken"}:
             s.add_argument("--threads", type=int, default=None)
+        if cmd == "features":
+            s.add_argument("--auto-panel-top-n", type=int, default=0)
+            s.add_argument(
+                "--auto-panel-levels",
+                choices=["species", "genus", "both"],
+                default="both",
+            )
+            s.add_argument(
+                "--auto-panel-metric",
+                choices=["mean_abundance", "prevalence", "mean_x_prevalence"],
+                default="mean_x_prevalence",
+            )
 
     s_sub = sub.add_parser("subsample")
     s_sub.add_argument("--metadata", required=True, type=Path)
@@ -63,7 +75,13 @@ def main() -> None:
     elif args.command == "bracken":
         run_bracken(args.metadata, config, threads=args.threads)
     elif args.command == "features":
-        build_features(args.metadata, config)
+        build_features(
+            args.metadata,
+            config,
+            auto_panel_top_n=args.auto_panel_top_n,
+            auto_panel_levels=args.auto_panel_levels,
+            auto_panel_metric=args.auto_panel_metric,
+        )
         build_stage_summary(config, args.metadata)
     elif args.command == "run-all":
         download_runs(args.metadata, config, limit=args.limit, threads=args.threads)
