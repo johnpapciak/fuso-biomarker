@@ -38,7 +38,49 @@ def shannon_diversity(relative_abundances: list[float]) -> float:
     return float(-np.sum(arr * np.log(arr)))
 
 
-def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
+def _resolve_auto_panel_levels(
+    auto_panel_levels: str,
+    species_df: pd.DataFrame,
+    genus_df: pd.DataFrame,
+) -> list[str]:
+    if auto_panel_levels == "species":
+        return ["species"]
+    if auto_panel_levels == "genus":
+        return ["genus"]
+    levels = []
+    if not species_df.empty:
+        levels.append("species")
+    if not genus_df.empty:
+        levels.append("genus")
+    return levels
+
+
+def _score_taxa(level_df: pd.DataFrame, metric: str) -> pd.DataFrame:
+    if level_df.empty:
+        return pd.DataFrame(columns=["taxon", "score"])
+    grouped = level_df.groupby("taxon")["relative_abundance"]
+    mean_abundance = grouped.mean()
+    prevalence = grouped.apply(lambda s: float((s > 0).mean()))
+    if metric == "mean_abundance":
+        score = mean_abundance
+    elif metric == "prevalence":
+        score = prevalence
+    else:
+        score = mean_abundance * prevalence
+    return (
+        pd.DataFrame({"taxon": score.index, "score": score.values})
+        .sort_values(["score", "taxon"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+
+
+def build_features(
+    metadata_csv: Path,
+    config: dict,
+    auto_panel_top_n: int = 0,
+    auto_panel_levels: str = "both",
+    auto_panel_metric: str = "mean_x_prevalence",
+) -> pd.DataFrame:
     features_dir = Path(config["paths"]["features_dir"])
     kraken_dir = Path(config["paths"]["kraken_dir"])
     bracken_dir = Path(config["paths"].get("bracken_dir", "data/bracken"))
@@ -66,9 +108,47 @@ def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
 
     full_matrix.to_csv(features_dir / "full_abundance_matrix.csv")
 
-    panel_taxa = config.get("panel_taxa", ["Fusobacterium nucleatum"])
+    auto_panel_cfg = config.get("auto_panel", {})
+    top_n = int(auto_panel_top_n if auto_panel_top_n is not None else auto_panel_cfg.get("top_n", 0))
+    level_opt = auto_panel_levels if auto_panel_levels is not None else auto_panel_cfg.get("levels", "both")
+    metric_opt = auto_panel_metric if auto_panel_metric is not None else auto_panel_cfg.get("metric", "mean_x_prevalence")
+
+    panel_taxa = list(config.get("panel_taxa", ["Fusobacterium nucleatum"]))
     pseudocount = float(config.get("pseudocount", 1e-6))
     pa_thresh = float(config.get("presence_absence_threshold", 1e-4))
+    dynamic_taxa: list[str] = []
+    dynamic_recs: list[dict] = []
+
+    selected_levels = _resolve_auto_panel_levels(level_opt, species_df, genus_df)
+    if top_n > 0 and selected_levels:
+        if selected_levels == ["species", "genus"]:
+            species_n = int(np.ceil(top_n / 2))
+            genus_n = int(np.floor(top_n / 2))
+            n_by_level = {"species": species_n, "genus": genus_n}
+        else:
+            n_by_level = {selected_levels[0]: top_n}
+
+        level_frames = {"species": species_df, "genus": genus_df}
+        for level in selected_levels:
+            scores = _score_taxa(level_frames[level], metric_opt)
+            n_pick = n_by_level.get(level, 0)
+            if n_pick <= 0 or scores.empty:
+                continue
+            chosen = scores.head(n_pick).copy()
+            for rank, row in enumerate(chosen.itertuples(index=False), start=1):
+                dynamic_taxa.append(str(row.taxon))
+                dynamic_recs.append(
+                    {
+                        "level": level,
+                        "taxon": str(row.taxon),
+                        "metric": metric_opt,
+                        "score": float(row.score),
+                        "rank": rank,
+                    }
+                )
+
+    merged_panel_taxa = list(dict.fromkeys(panel_taxa + dynamic_taxa))
+    pd.DataFrame(dynamic_recs).to_csv(features_dir / "auto_panel_taxa.csv", index=False)
 
     rows: list[dict] = []
     for _, mrow in md.iterrows():
@@ -125,7 +205,7 @@ def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
             "sequencing_depth_proxy": depth,
         }
 
-        for taxon in panel_taxa:
+        for taxon in merged_panel_taxa:
             col = f"panel_{taxon.replace(' ', '_')}"
             val = s_map.get(taxon, g_map.get(taxon, 0.0))
             rec[col] = val
