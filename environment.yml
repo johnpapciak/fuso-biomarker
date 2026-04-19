@@ -8,3 +8,4 @@ dependencies:
   - matplotlib>=3.7
   - pytest>=7.0
   - pip
+  - scikit-learn>=1.4
