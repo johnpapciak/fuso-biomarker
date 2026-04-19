@@ -16,20 +16,26 @@ tools:
   bracken_path: bracken
   seqtk_path: seqtk
 
-kraken_db: /path/to/kraken2_db
+kraken_db: kraken_db_full
 subsample_fraction: 0.1
 target_reads: null
 threads: 1
-kraken_confidence: 0.1
+kraken_confidence: 0.0
 kraken_memory_mapping: false
 pseudocount: 1e-6
 presence_absence_threshold: 1e-4
+
 panel_taxa:
   - Fusobacterium nucleatum
-  - Bacteroides fragilis
   - Escherichia coli
-  - Peptostreptococcus anaerobius
+  - Segatella copri
+  - Alistipes shahii
+  - Phocaeicola vulgatus
+  - Bacteroides sp. M10
+  - Phocaeicola dorei
+  - Bacteroides uniformis
+  - Bacteroides fragilis
 
-bracken_read_length: 100
+bracken_read_length: 150
 bracken_level: S
-bracken_threshold: 10
+bracken_threshold: 1
