@@ -7,10 +7,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .kraken import collect_abundance_tables, parse_kraken_report
+from .kraken import parse_kraken_report
 from .utils import ensure_dir, read_json, validate_and_clean_metadata
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _load_bracken_abundance_tables(bracken_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    species_path = bracken_dir / "bracken_abundance_species.csv"
+    genus_path = bracken_dir / "bracken_abundance_genus.csv"
+
+    species_df = pd.read_csv(species_path) if species_path.exists() and species_path.stat().st_size > 0 else pd.DataFrame()
+    genus_df = pd.read_csv(genus_path) if genus_path.exists() and genus_path.stat().st_size > 0 else pd.DataFrame()
+
+    if not species_df.empty:
+        species_df = species_df.rename(columns={"fraction_total_reads": "relative_abundance", "name": "taxon"}).copy()
+        species_df["level"] = "species"
+
+    if not genus_df.empty:
+        genus_df = genus_df.rename(columns={"fraction_total_reads": "relative_abundance", "name": "taxon"}).copy()
+        genus_df["level"] = "genus"
+
+    return species_df, genus_df
 
 
 def shannon_diversity(relative_abundances: list[float]) -> float:
@@ -23,18 +41,26 @@ def shannon_diversity(relative_abundances: list[float]) -> float:
 def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
     features_dir = Path(config["paths"]["features_dir"])
     kraken_dir = Path(config["paths"]["kraken_dir"])
+    bracken_dir = Path(config["paths"].get("bracken_dir", "data/bracken"))
     qc_dir = Path(config["paths"]["qc_dir"])
     reports_dir = Path(config["paths"].get("reports_dir", "reports"))
     ensure_dir(features_dir)
     ensure_dir(reports_dir)
 
     md = validate_and_clean_metadata(metadata_csv)
-    species_df, genus_df = collect_abundance_tables(md, kraken_dir)
+    species_df, genus_df = _load_bracken_abundance_tables(bracken_dir)
+    if species_df.empty and genus_df.empty:
+        LOGGER.warning("No combined Bracken abundance tables found in %s; full abundance matrix will be empty", bracken_dir)
 
     full_long = pd.concat([species_df, genus_df], ignore_index=True) if not species_df.empty or not genus_df.empty else pd.DataFrame()
     if not full_long.empty:
-        full_long["relative_abundance"] = full_long["percentage"] / 100.0
-        full_matrix = full_long.pivot_table(index="sample_id", columns="name", values="relative_abundance", aggfunc="sum", fill_value=0)
+        full_matrix = full_long.pivot_table(
+            index="sample_id",
+            columns="taxon",
+            values="relative_abundance",
+            aggfunc="sum",
+            fill_value=0,
+        )
     else:
         full_matrix = pd.DataFrame(index=md["sample_id"])
 
@@ -48,22 +74,34 @@ def build_features(metadata_csv: Path, config: dict) -> pd.DataFrame:
     for _, mrow in md.iterrows():
         run = mrow["run_accession"]
         sample_id = mrow["sample_id"]
-        report = parse_kraken_report(kraken_dir / f"{run}.report.tsv", sample_id)
+        species_rows = species_df[species_df["run_accession"] == run].copy() if not species_df.empty else pd.DataFrame()
+        genus_rows = genus_df[genus_df["run_accession"] == run].copy() if not genus_df.empty else pd.DataFrame()
+        if genus_rows.empty and not species_rows.empty:
+            genus_rows = species_rows.copy()
+            genus_rows["taxon"] = genus_rows["taxon"].astype(str).str.split().str[0]
+            genus_rows = (
+                genus_rows.groupby(["run_accession", "sample_id", "taxon"], as_index=False)["relative_abundance"].sum()
+            )
 
-        species = report[report["rank_code"] == "S"].copy()
-        genus = report[report["rank_code"] == "G"].copy()
-        species["ra"] = species["percentage"] / 100.0
-        genus["ra"] = genus["percentage"] / 100.0
-
-        s_map = dict(zip(species["name"], species["ra"]))
-        g_map = dict(zip(genus["name"], genus["ra"]))
+        s_map = (
+            species_rows.groupby("taxon")["relative_abundance"].sum().to_dict()
+            if not species_rows.empty
+            else {}
+        )
+        g_map = (
+            genus_rows.groupby("taxon")["relative_abundance"].sum().to_dict()
+            if not genus_rows.empty
+            else {}
+        )
 
         f_nuc = s_map.get("Fusobacterium nucleatum", 0.0)
         fuso_gen = g_map.get("Fusobacterium", 0.0)
+
+        report = parse_kraken_report(kraken_dir / f"{run}.report.tsv", sample_id)
         total_bact = report.loc[report["name"].eq("Bacteria"), "percentage"].div(100).max() if not report.empty else 0.0
         total_bact = float(0.0 if pd.isna(total_bact) else total_bact)
-        n_species = int((species["ra"] > 0).sum()) if not species.empty else 0
-        shannon = shannon_diversity(species["ra"].tolist())
+        n_species = int((species_rows["relative_abundance"] > 0).sum()) if not species_rows.empty else 0
+        shannon = shannon_diversity(species_rows["relative_abundance"].tolist()) if not species_rows.empty else 0.0
 
         qc_json = qc_dir / "reports" / f"{run}.fastp.json"
         depth = 0
