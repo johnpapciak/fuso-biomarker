@@ -44,6 +44,6 @@ def test_run_bracken_generates_outputs(tmp_path: Path, monkeypatch) -> None:
     log_df = run_bracken(md_path, config, skip_existing=False)
     assert log_df.iloc[0]["status"] == "bracken_done"
 
-    abundance = pd.read_csv(bracken_dir / "bracken_abundance.csv")
+    abundance = pd.read_csv(bracken_dir / "bracken_abundance_species.csv")
     assert abundance.iloc[0]["sample_id"] == "S1"
     assert float(abundance.iloc[0]["fraction_total_reads"]) == 0.07

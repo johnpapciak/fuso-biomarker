@@ -10,6 +10,15 @@ from .utils import check_tool_available, ensure_dir, run_command, validate_and_c
 LOGGER = logging.getLogger(__name__)
 
 
+def _bracken_level_suffix(level: str) -> str:
+    normalized_level = level.strip().upper()
+    if normalized_level in {"G", "GENUS"}:
+        return "_genus"
+    if normalized_level in {"S", "SPECIES"}:
+        return "_species"
+    return ""
+
+
 def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, threads: int | None = None) -> pd.DataFrame:
     bracken = config["tools"].get("bracken_path", "bracken")
     check_tool_available(bracken)
@@ -24,6 +33,7 @@ def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, th
 
     read_len = int(config.get("bracken_read_length", 100))
     level = str(config.get("bracken_level", "S"))
+    level_suffix = _bracken_level_suffix(level)
     threshold = int(config.get("bracken_threshold", 10))
     resolved_threads = int(threads if threads is not None else config.get("threads", 1))
     if resolved_threads < 1:
@@ -36,7 +46,7 @@ def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, th
         run = row["run_accession"]
         sample_id = row["sample_id"]
         input_report = kraken_dir / f"{run}.report.tsv"
-        output_file = bracken_dir / f"{run}.bracken.tsv"
+        output_file = bracken_dir / f"{run}.bracken{level_suffix}.tsv"
 
         try:
             if not input_report.exists() or input_report.stat().st_size == 0:
@@ -78,7 +88,7 @@ def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, th
     for _, row in md.iterrows():
         run = row["run_accession"]
         sample_id = row["sample_id"]
-        file_path = bracken_dir / f"{run}.bracken.tsv"
+        file_path = bracken_dir / f"{run}.bracken{level_suffix}.tsv"
         if not file_path.exists() or file_path.stat().st_size == 0:
             continue
         df = pd.read_csv(file_path, sep="\t")
@@ -87,5 +97,5 @@ def run_bracken(metadata_csv: Path, config: dict, skip_existing: bool = True, th
         combined_frames.append(df)
 
     combined_df = pd.concat(combined_frames, ignore_index=True) if combined_frames else pd.DataFrame()
-    combined_df.to_csv(bracken_dir / "bracken_abundance.csv", index=False)
+    combined_df.to_csv(bracken_dir / f"bracken_abundance{level_suffix}.csv", index=False)
     return log_df
