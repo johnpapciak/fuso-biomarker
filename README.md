@@ -17,7 +17,15 @@ Expected on PATH (or set in `config/config.yaml`):
 - `kraken2`
 - `bracken`
 
-You can control tool multithreading with `threads` in `config/config.yaml` (default `1`) or with `--threads` for `download`, `qc`, `kraken`, and `run-all`.
+You can control per-tool multithreading with `threads` in `config/config.yaml` (default `1`) or with `--threads` for `download`, `qc`, `kraken`, and `run-all`.
+
+The download stage also supports sample-level parallelism via `--download-workers` (default `1`).
+- `--threads`: threads passed to tools (for download, this is `fasterq-dump -e`).
+- `--download-workers`: number of runs downloaded/converter concurrently.
+
+Recommended laptop starting point: `--download-workers 2 --threads 6`.
+
+Warning: effective parallel pressure is approximately `download_workers * threads`; high settings can oversubscribe CPU and disk. SRA temporary/cache usage can also grow quickly during concurrent downloads.
 
 Set `kraken_memory_mapping: true` in `config/config.yaml` to add Kraken2's `--memory-mapping` flag (useful when RAM is limited).
 
@@ -50,7 +58,7 @@ See `metadata/example_metadata.csv`.
 ## Run steps
 ```bash
 python -m src.cli validate-metadata --metadata metadata/example_metadata.csv
-python -m src.cli download --metadata metadata/example_metadata.csv --threads 8
+python -m src.cli download --metadata metadata/example_metadata.csv --threads 8 --download-workers 2
 python -m src.cli subsample --metadata metadata/example_metadata.csv --fraction 0.1
 python -m src.cli qc --metadata metadata/example_metadata.csv --threads 8
 python -m src.cli kraken --metadata metadata/example_metadata.csv --threads 8
@@ -60,7 +68,7 @@ python -m src.cli features --metadata metadata/example_metadata.csv
 
 Run full pipeline:
 ```bash
-python -m src.cli run-all --metadata metadata/example_metadata.csv --fraction 0.1 --threads 8
+python -m src.cli run-all --metadata metadata/example_metadata.csv --fraction 0.1 --threads 8 --download-workers 2
 ```
 
 ## Main outputs

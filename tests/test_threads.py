@@ -12,8 +12,13 @@ def test_cli_threads_option_for_qc_and_run_all() -> None:
     qc_args = parser.parse_args(["qc", "--metadata", "meta.csv", "--threads", "4"])
     assert qc_args.threads == 4
 
-    run_all_args = parser.parse_args(["run-all", "--metadata", "meta.csv", "--threads", "6"])
+    download_args = parser.parse_args(["download", "--metadata", "meta.csv", "--threads", "4", "--download-workers", "2"])
+    assert download_args.threads == 4
+    assert download_args.download_workers == 2
+
+    run_all_args = parser.parse_args(["run-all", "--metadata", "meta.csv", "--threads", "6", "--download-workers", "3"])
     assert run_all_args.threads == 6
+    assert run_all_args.download_workers == 3
 
 
 def test_run_qc_passes_thread_flag(tmp_path: Path, monkeypatch) -> None:
