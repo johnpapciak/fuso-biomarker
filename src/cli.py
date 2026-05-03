@@ -25,6 +25,8 @@ def build_parser() -> argparse.ArgumentParser:
         s.add_argument("--metadata", required=True, type=Path)
         if cmd in {"download", "qc", "kraken", "bracken"}:
             s.add_argument("--threads", type=int, default=None)
+        if cmd == "download":
+            s.add_argument("--download-workers", type=int, default=1)
         if cmd == "features":
             s.add_argument("--auto-panel-top-n", type=int, default=0)
             s.add_argument(
@@ -49,6 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     s_all.add_argument("--target-reads", type=int, default=None)
     s_all.add_argument("--limit", type=int, default=None)
     s_all.add_argument("--threads", type=int, default=None)
+    s_all.add_argument("--download-workers", type=int, default=1)
     return parser
 
 
@@ -65,7 +68,7 @@ def main() -> None:
         return
 
     if args.command == "download":
-        download_runs(args.metadata, config, threads=args.threads)
+        download_runs(args.metadata, config, threads=args.threads, download_workers=args.download_workers)
     elif args.command == "subsample":
         subsample_runs(args.metadata, config, fraction=args.fraction, target_reads=args.target_reads)
     elif args.command == "qc":
@@ -84,7 +87,13 @@ def main() -> None:
         )
         build_stage_summary(config, args.metadata)
     elif args.command == "run-all":
-        download_runs(args.metadata, config, limit=args.limit, threads=args.threads)
+        download_runs(
+            args.metadata,
+            config,
+            limit=args.limit,
+            threads=args.threads,
+            download_workers=args.download_workers,
+        )
         subsample_runs(args.metadata, config, fraction=args.fraction, target_reads=args.target_reads)
         run_qc(args.metadata, config, threads=args.threads)
         run_kraken(args.metadata, config, threads=args.threads)
