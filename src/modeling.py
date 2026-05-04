@@ -86,7 +86,9 @@ def _panel_taxa_columns(df: pd.DataFrame) -> list[str]:
     ]
 
 
-def _build_preprocessor(feature_columns: list[str], selected_taxa: list[str]) -> ColumnTransformer:
+def _build_preprocessor(
+    feature_columns: list[str], selected_taxa: list[str], age_group_categories: list[str] | None = None
+) -> ColumnTransformer:
     numeric_features = [c for c in BASELINE_NUMERIC if c in feature_columns] + [
         c for c in selected_taxa if c in feature_columns
     ]
@@ -105,13 +107,15 @@ def _build_preprocessor(feature_columns: list[str], selected_taxa: list[str]) ->
             )
         )
     if categorical_features:
+        encoder_kwargs: dict[str, Any] = {"handle_unknown": "ignore"}
+        if age_group_categories is not None and "age_group" in categorical_features:
+            encoder_kwargs["categories"] = [age_group_categories]
         transformers.append(
             (
                 "cat",
                 Pipeline(
                     [
-                        ("imputer", SimpleImputer(strategy="most_frequent")),
-                        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+                        ("onehot", OneHotEncoder(**encoder_kwargs)),
                     ]
                 ),
                 categorical_features,
@@ -178,6 +182,17 @@ def run_nested_cv_modeling(
 
     candidate_feature_cols = [c for c in df.columns if c not in metadata_cols]
     feature_df = df[candidate_feature_cols].copy()
+    if "age_group" in feature_df.columns:
+        feature_df["age_group"] = feature_df["age_group"].astype(str).str.strip().str.lower()
+        unknown_mask = feature_df["age_group"].isin({"", "unknown", "na", "n/a", "none", "nan"})
+        feature_df.loc[unknown_mask, "age_group"] = "__unknown__"
+        known_age_groups = sorted(
+            x
+            for x in feature_df["age_group"].dropna().unique().tolist()
+            if x != "__unknown__"
+        )
+    else:
+        known_age_groups = []
 
     outer_cv = StratifiedKFold(n_splits=outer_splits, shuffle=True, random_state=random_state)
     clf_specs = _default_classifier_specs(random_state=random_state)
@@ -201,7 +216,11 @@ def run_nested_cv_modeling(
             if not usable_cols:
                 continue
 
-            preprocessor = _build_preprocessor(feature_columns=usable_cols, selected_taxa=selected_taxa)
+            preprocessor = _build_preprocessor(
+                feature_columns=usable_cols,
+                selected_taxa=selected_taxa,
+                age_group_categories=known_age_groups if known_age_groups else None,
+            )
 
             x_train = train_df[usable_cols]
             x_val = val_df[usable_cols]
