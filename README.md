@@ -44,6 +44,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+Bracken should be installed directly from the official GitHub repository rather than through Conda; clone the repository, run `bash install_bracken.sh`, compile with `make`, and ensure the resulting `bracken` executable is available in your `PATH` or specified in `config.yaml`
 
 ## Metadata format
 Input CSV must include:
