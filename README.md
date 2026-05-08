@@ -6,7 +6,7 @@ Lightweight Python (3.11+) pipeline for exploratory colorectal cancer stool **sh
 - This pipeline targets **shotgun metagenomic** reads and uses Kraken2 taxonomy profiles (not 16S/amplicon workflows).
 - Relative abundance is compositional and should be treated as a proxy signal.
 - *F. nucleatum* abundance is a candidate biomarker feature, not evidence of causality.
-- The panel taxa features are for exploratory modeling.
+- The panel taxa features are for exploratory downstream analysis (e.g., notebooks).
 
 ## External tools
 Expected on PATH (or set in `config/config.yaml`):
