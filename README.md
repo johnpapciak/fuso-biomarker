@@ -3,7 +3,7 @@
 Lightweight Python (3.11+) pipeline for exploratory colorectal cancer stool **shotgun metagenome** analysis with a focus on **Fusobacterium nucleatum** features.
 
 ## Scientific scope and assumptions
-- This pipeline targets **shotgun metagenomic** reads and uses Kraken2 taxonomy profiles (not 16S/amplicon workflows).
+- This pipeline targets **shotgun metagenomic** reads and uses Kraken2 taxonomy profiles.
 - Relative abundance is compositional and should be treated as a proxy signal.
 - *F. nucleatum* abundance is a candidate biomarker feature, not evidence of causality.
 - The panel taxa features are for exploratory downstream analysis (e.g., notebooks).
