@@ -21,20 +21,24 @@ subsample_fraction: 0.1
 target_reads: null
 threads: 1
 kraken_confidence: 0.0
-kraken_memory_mapping: false
+kraken_memory_mapping: true
 pseudocount: 1e-6
 presence_absence_threshold: 1e-4
 
 panel_taxa:
-  - Fusobacterium nucleatum
-  - Escherichia coli
-  - Segatella copri
-  - Alistipes shahii
-  - Phocaeicola vulgatus
-  - Bacteroides sp. M10
-  - Phocaeicola dorei
-  - Bacteroides uniformis
-  - Bacteroides fragilis
+# Cancer-associated (5)
+- Fusobacterium nucleatum
+- Bacteroides fragilis
+- Escherichia coli
+- Parvimonas micra
+- Peptostreptococcus anaerobius
+
+# Healthy-associated (5)
+- Faecalibacterium prausnitzii
+- Agathobacter rectalis
+- Anaerostipes hadrus
+- Bifidobacterium longum
+- Roseburia intestinalis
 
 bracken_read_length: 150
 bracken_level: S
