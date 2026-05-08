@@ -1,0 +1,13 @@
+feature_set,model,cv_type,auc_mean,auc_std
+fuso_only,random_forest,single_5fold,0.53125,0.07211237974508954
+fuso_only,random_forest,repeated_5fold,0.531875,0.1252715799772638
+diversity_only,logistic_l1,single_5fold,0.6125,0.09702609185162513
+diversity_only,logistic_l1,repeated_5fold,0.6096875,0.13074642980307338
+panel_log,logistic_l1,single_5fold,0.61875,0.13206591630697148
+panel_log,logistic_l1,repeated_5fold,0.5828125,0.11818326935844177
+panel_presence,logistic_l1,single_5fold,0.5734375,0.13364627987714436
+panel_presence,logistic_l1,repeated_5fold,0.59484375,0.10706272347466461
+panel_log_plus_diversity,logistic_l1,single_5fold,0.725,0.12678414234437996
+panel_log_plus_diversity,logistic_l1,repeated_5fold,0.651875,0.12651580928879996
+panel_presence_plus_diversity,random_forest,single_5fold,0.6171875,0.06647514808182077
+panel_presence_plus_diversity,random_forest,repeated_5fold,0.6153125,0.11207123153378835
